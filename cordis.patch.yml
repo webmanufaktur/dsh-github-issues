@@ -1,0 +1,5 @@
+# github-issues bundle layer: one Host row serving the repository/issues route
+# and the `github_issues` tool, one Client module rendering the right Sidebar tab.
+- insert:
+    - id: github-issues
+      name: '@local/github-issues'

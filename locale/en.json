@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "GitHub issues",
+    "description": "Right Sidebar page showing the project's GitHub repository, its remote and its issues, with edit, close, comment, delete and agent handoff.",
+    "detail": "docs/DETAIL.md"
+  }
+}

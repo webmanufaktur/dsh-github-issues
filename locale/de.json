@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "GitHub-Issues",
+    "description": "Seitenleiste rechts mit Repository, Remote und Issues des Projekts; Issues bearbeiten, schließen, kommentieren, löschen und an einen Agenten geben.",
+    "detail": "docs/DETAIL.md"
+  }
+}
