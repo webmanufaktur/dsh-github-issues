@@ -13,9 +13,11 @@ its GitHub issues without leaving the Session.
 
 ## Opening it
 
-1. Open the right Sidebar (its toggle sits in the conversation header).
-2. In the empty strip, pick the **+** control. It opens the guide.
-3. Pick the **GitHub issues** card.
+- **One click:** pick the GitHub glyph in the conversation header utilities,
+  beside the right Sidebar's own toggle. It opens the page and expands the
+  column.
+- **Through the guide:** open the right Sidebar, pick the **+** control in the
+  empty strip to open the guide, then pick the **GitHub issues** card.
 
 The page is an ordinary tab, so it can be floated, docked, or split like any
 other; it stays open per Session.

@@ -35,7 +35,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git@github.com:webmanufaktur/dsh-github-issues.git"
+    "url": "git+https://github.com/webmanufaktur/dsh-github-issues.git"
   },
   "homepage": "https://github.com/webmanufaktur/dsh-github-issues",
   "keywords": [
