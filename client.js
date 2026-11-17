@@ -39,7 +39,7 @@ window.__ModuleLoader__.load({
       deleteForever: 'Delete permanently',
       deleted: 'Deleted',
       handToAgent: 'Work on this',
-      handedOver: 'Queued for this session',
+      handedOver: 'Opening a new session…',
       loading: 'Reading repository…',
       loadingIssue: 'Loading issue…',
       loadFailed: 'Could not read GitHub',
@@ -51,6 +51,7 @@ window.__ModuleLoader__.load({
       ghMissing: 'The GitHub CLI (gh) is not installed on this machine.',
       ghError: 'The GitHub CLI failed',
       noSession: 'This panel has no Session.',
+      noNewSession: 'Could not start a new session in this project.',
       empty: 'No issues here.',
       noBody: 'No description.',
       comments: 'Comments',
@@ -92,7 +93,7 @@ window.__ModuleLoader__.load({
       deleteForever: 'Endgültig löschen',
       deleted: 'Gelöscht',
       handToAgent: 'Daran arbeiten',
-      handedOver: 'Für diese Session eingereiht',
+      handedOver: 'Neue Session wird geöffnet…',
       loading: 'Repository wird gelesen…',
       loadingIssue: 'Issue wird geladen…',
       loadFailed: 'GitHub konnte nicht gelesen werden',
@@ -104,6 +105,7 @@ window.__ModuleLoader__.load({
       ghMissing: 'Die GitHub-CLI (gh) ist auf diesem Rechner nicht installiert.',
       ghError: 'Die GitHub-CLI ist fehlgeschlagen',
       noSession: 'Diese Seite hat keine Session.',
+      noNewSession: 'Neue Session konnte in diesem Projekt nicht gestartet werden.',
       empty: 'Keine Issues vorhanden.',
       noBody: 'Keine Beschreibung.',
       comments: 'Kommentare',
@@ -250,9 +252,10 @@ window.__ModuleLoader__.load({
         case 'not-github': return t('notGitHub')
         case 'gh-missing': return t('ghMissing')
         case 'no-session': return t('noSession')
+        case 'no-session-controller': return t('noNewSession')
         default:
           if (typeof result.error === 'string' && result.error.trim().length > 0) {
-            return `${t('ghError')}: ${result.error.trim()}`
+            return `${t('actionFailed')}: ${result.error.trim()}`
           }
           return t('actionFailed')
       }
@@ -331,7 +334,7 @@ window.__ModuleLoader__.load({
     }
 
     function IssueDetail(props) {
-      const { t, sessionId, detail, onDeleted, notify, onRefresh } = props
+      const { t, sessionId, detail, onDeleted, notify, onRefresh, openSession } = props
       const issue = detail.issue
       const [mode, setMode] = React.useState('view')
       const [busy, setBusy] = React.useState(false)
@@ -418,7 +421,10 @@ window.__ModuleLoader__.load({
             type: 'button', className: 'ghi-btn ghi-btnPrimary', disabled: busy,
             onClick: async () => {
               const result = await run('assign', {})
-              if (result?.ok === true) notify(t('handedOver'))
+              if (result?.ok === true) {
+                notify(t('handedOver'))
+                openSession(result.sessionId)
+              }
             },
           }, busy ? t('working') : t('handToAgent')),
           h('button', { type: 'button', className: 'ghi-btn', disabled: busy, onClick: () => setMode('edit') }, t('edit')),
@@ -475,7 +481,7 @@ window.__ModuleLoader__.load({
     }
 
     function GithubIssuesPanel(props) {
-      const { t, sessionId } = props
+      const { t, sessionId, openSession } = props
       const [state, setState] = React.useState({ status: 'loading', payload: null, error: null })
       const [filter, setFilter] = React.useState('open')
       const [selected, setSelected] = React.useState(null)
@@ -658,6 +664,7 @@ window.__ModuleLoader__.load({
                               sessionId,
                               detail: selectedIssue,
                               notify,
+                              openSession: props.openSession,
                               onRefresh: reload,
                               onDeleted: number => {
                                 setSelected(null)
@@ -711,7 +718,7 @@ window.__ModuleLoader__.load({
     }
 
     return {
-      inject: ['slots', 'locale', 'sidebarRight', 'sidebarRightTabs'],
+      inject: ['slots', 'locale', 'sidebarRight', 'sidebarRightTabs', 'uiWorkspace'],
       apply(ctx) {
         ctx.effect(() => ctx.locale.register(NS, { en: EN, de: DE }), 'github-issues: dictionaries')
         const t = ctx.locale.bind(NS)
@@ -752,7 +759,17 @@ window.__ModuleLoader__.load({
           key: TAB_ID,
           locale: NS,
           inject: sessionId => ({ sessionId }),
-        }, props => h(GithubIssuesPanel, { t, sessionId: props.sessionId })))
+        }, props => h(GithubIssuesPanel, {
+          t,
+          sessionId: props.sessionId,
+          openSession: id => {
+            try {
+              ctx.uiWorkspace.openSession(id)
+            } catch (error) {
+              console.error('github-issues: could not open the new session', error)
+            }
+          },
+        })))
       },
     }
   },

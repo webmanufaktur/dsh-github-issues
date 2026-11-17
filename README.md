@@ -9,8 +9,9 @@ Sidebar — and lets the agent work on them.
 - **All issues** — filter by open, closed or all, newest update first.
 - **Work on them in place** — open an issue for its description, labels and
   comments, then edit, comment, close, reopen or delete it.
-- **Hand off to the agent** — *Work on this* queues the issue into the current
-  Session as your own request, so the agent starts on it immediately.
+- **Hand off to the agent** — *Work on this* starts a **new Session** in the
+  same project, with the issue as its first request, and switches the GUI to it,
+  so issue work never mixes into the conversation that asked for it.
 - **Agent tool included** — the same operations are exposed to the model as the
   `github_issues` tool, including `assign`.
 

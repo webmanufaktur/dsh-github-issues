@@ -11,6 +11,7 @@
  * do.
  */
 import { execFile } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter, join } from 'node:path'
@@ -312,19 +313,19 @@ async function createIssue(ctx, request) {
 }
 
 /**
- * Queue one issue into a live Session as the user's own request, so the agent
- * works on it in that Session.
+ * Start a new Session in the same Workspace and hand it the issue as its first
+ * request, so issue work never mixes into the conversation that asked for it.
  */
 async function assignToAgent(ctx, request) {
   const repo = await resolveRepository(ctx, request.sessionId)
   if (!repo.ok) return repo
   const number = Number(request.number)
   if (!Number.isInteger(number) || number <= 0) return { ok: false, code: 'bad-number', error: 'issue number required' }
-  const session = ctx.sessions.get(request.sessionId)
-  const agent = ctx.agents.get(request.sessionId)
-  if (session === undefined || agent === undefined) {
-    return { ok: false, code: 'no-agent', error: 'no live agent for this session' }
+  const controller = ctx.get('sessionController')
+  if (controller === undefined) {
+    return { ok: false, code: 'no-session-controller', error: 'no Session creation provider' }
   }
+  const directory = sessionDirectory(ctx, request.sessionId)
   const issue = await gh([
     'issue', 'view', String(number),
     '--repo', repo.repo.slug,
@@ -338,10 +339,33 @@ async function assignToAgent(ctx, request) {
     '',
     detail.body.trim().length > 0 ? detail.body.trim() : '(no description)',
     '',
-    `Implement the change in this workspace, run the relevant checks, and report the result. Close the issue when it is done.`,
+    'Implement the change in this workspace, run the relevant checks, and report the result. Close the issue when it is done.',
   ].join('\n')
-  agent.followup({ content: [{ type: 'text', text }], source: { kind: 'user' } })
-  return { ok: true, action: 'assign', repo: repo.repo, number: detail.number, title: detail.title, url: detail.url }
+
+  // Reuse the asking Session's preset so the new one runs the same agent loop.
+  const session = ctx.sessions.get(request.sessionId)
+  const preset = session === undefined ? undefined : ctx.get('agentPresets')?.presetForSession(session) ?? undefined
+  // Attach to the registered Workspace at this directory when there is one, so
+  // the new Session joins the project's list instead of floating alone.
+  const workspace = await ctx.get('workspaceRegistry')?.resolveByPath(directory)
+  const sessionId = `session-${randomUUID()}`
+  await controller.create({
+    sessionId,
+    ...(workspace === undefined ? { cwd: directory } : { workspaceId: workspace.id }),
+    ...(preset === undefined ? {} : { agentPreset: preset }),
+  })
+  const found = await controller.resolveAgent(sessionId)
+  if ('error' in found) throw found.error
+  found.agent.followup({ content: [{ type: 'text', text }], source: { kind: 'user' } })
+  return {
+    ok: true,
+    action: 'assign',
+    sessionId,
+    repo: repo.repo,
+    number: detail.number,
+    title: detail.title,
+    url: detail.url,
+  }
 }
 
 /** Dispatch one request object; every failure keeps an explicit reason. */
@@ -406,7 +430,7 @@ export function apply(ctx) {
       description:
         'Read and change the GitHub issues of the git repository containing this workspace. '
         + 'Actions: repo (repository plus open issues), list, view, create, edit, comment, close, reopen, delete, assign. '
-        + 'assign hands one issue to this session so the agent works on it.',
+        + 'assign starts a new Session in this workspace and hands it the issue as its first request.',
       parameters: {
         type: 'object',
         properties: {
