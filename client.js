@@ -40,6 +40,7 @@ window.__ModuleLoader__.load({
       deleted: 'Deleted',
       handToAgent: 'Work on this',
       handedOver: 'Opening a new session…',
+      handedOverReuse: 'This issue already has its session',
       loading: 'Reading repository…',
       loadingIssue: 'Loading issue…',
       loadFailed: 'Could not read GitHub',
@@ -94,6 +95,7 @@ window.__ModuleLoader__.load({
       deleted: 'Gelöscht',
       handToAgent: 'Daran arbeiten',
       handedOver: 'Neue Session wird geöffnet…',
+      handedOverReuse: 'Dieses Issue hat bereits seine Session',
       loading: 'Repository wird gelesen…',
       loadingIssue: 'Issue wird geladen…',
       loadFailed: 'GitHub konnte nicht gelesen werden',
@@ -422,7 +424,7 @@ window.__ModuleLoader__.load({
             onClick: async () => {
               const result = await run('assign', {})
               if (result?.ok === true) {
-                notify(t('handedOver'))
+                notify(result.reused === true ? t('handedOverReuse') : t('handedOver'))
                 openSession(result.sessionId)
               }
             },

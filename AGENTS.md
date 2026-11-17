@@ -22,10 +22,12 @@ the Harness Web UI's right Sidebar, with agent handoff. Two halves:
 - **One operation, two callers.** Every UI action lives once in the Host
   dispatch; the `github_issues` tool calls the same function. Do not fork logic
   into the Client.
-- **A handoff always starts a new Session.** `assign` creates a Session through
-  `ctx.sessionController.create` (Workspace-attached, same preset), sends the
-  issue as its first request and returns the id so the Client can open it.
-  Never queue issue work into the asking conversation.
+- **A handoff always starts a new Session — and only one per issue.** `assign`
+  creates a Session through `ctx.sessionController.create` (Workspace-attached,
+  same preset), sends the issue as its first request and returns the id so the
+  Client can open it. The `owner/name#number` map and the in-flight guard keep a
+  repeat click, a second panel or the agent tool from opening a second Session
+  for the same issue. Never queue issue work into the asking conversation.
 - **Stable contracts:** route `/api/github.issues`, tab id
   `@local/github-issues`, tab kind `github-issues`, guide entry id
   `github-issues`. Changing one breaks installed layouts.

@@ -31,7 +31,7 @@ other; it stays open per Session.
 | Comment | Adds a comment to the issue. |
 | Close / Reopen | Changes the issue state. |
 | Delete | Deletes the issue permanently, after a confirmation. |
-| Work on this | Starts a new Session in the same project with the issue as its first request and opens it. |
+| Work on this | Starts a new Session in the same project with the issue as its first request and opens it. Each issue has one such Session; clicking again opens the existing one. |
 
 The agent has the same operations through the `github_issues` tool, including
 `assign`, so a handoff can also be requested in conversation; it creates a new

@@ -312,15 +312,56 @@ async function createIssue(ctx, request) {
   return { ok: true, url: createdUrl, repo: repo.repo, issues: listed.ok ? listed.issues : [] }
 }
 
+/** Issue key (`owner/name#42`) → the one Session working on it. */
+const issueSessions = new Map()
+/** Issue key → in-flight assignment, so a double click creates no second Session. */
+const issueAssigns = new Map()
+
+/** Shape one handoff response from the stored or freshly created entry. */
+function handoffResult(repo, entry) {
+  return {
+    ok: true,
+    action: 'assign',
+    reused: entry.reused === true,
+    sessionId: entry.sessionId,
+    repo,
+    number: entry.number,
+    title: entry.title,
+    url: entry.url,
+  }
+}
+
 /**
- * Start a new Session in the same Workspace and hand it the issue as its first
- * request, so issue work never mixes into the conversation that asked for it.
+ * Create the one Session that works on an issue, or report the live one that
+ * already does. Issue work never mixes into the asking conversation, and one
+ * issue never splits across two Sessions.
  */
 async function assignToAgent(ctx, request) {
   const repo = await resolveRepository(ctx, request.sessionId)
   if (!repo.ok) return repo
   const number = Number(request.number)
   if (!Number.isInteger(number) || number <= 0) return { ok: false, code: 'bad-number', error: 'issue number required' }
+  const key = `${repo.repo.slug}#${number}`
+
+  const known = issueSessions.get(key)
+  if (known !== undefined) {
+    if (ctx.agents.get(known.sessionId) !== undefined) return handoffResult(repo.repo, { ...known, reused: true })
+    issueSessions.delete(key)
+  }
+  const pending = issueAssigns.get(key)
+  if (pending !== undefined) return pending
+
+  const task = startIssueSession(ctx, request, repo, key, number)
+  issueAssigns.set(key, task)
+  try {
+    return await task
+  } finally {
+    issueAssigns.delete(key)
+  }
+}
+
+/** Fetch the issue, create its Session in the asking Session's Workspace, and send it as the first request. */
+async function startIssueSession(ctx, request, repo, key, number) {
   const controller = ctx.get('sessionController')
   if (controller === undefined) {
     return { ok: false, code: 'no-session-controller', error: 'no Session creation provider' }
@@ -357,15 +398,9 @@ async function assignToAgent(ctx, request) {
   const found = await controller.resolveAgent(sessionId)
   if ('error' in found) throw found.error
   found.agent.followup({ content: [{ type: 'text', text }], source: { kind: 'user' } })
-  return {
-    ok: true,
-    action: 'assign',
-    sessionId,
-    repo: repo.repo,
-    number: detail.number,
-    title: detail.title,
-    url: detail.url,
-  }
+  const entry = { sessionId, number: detail.number, title: detail.title, url: detail.url, reused: false }
+  issueSessions.set(key, entry)
+  return handoffResult(repo.repo, entry)
 }
 
 /** Dispatch one request object; every failure keeps an explicit reason. */

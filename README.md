@@ -11,7 +11,9 @@ Sidebar — and lets the agent work on them.
   comments, then edit, comment, close, reopen or delete it.
 - **Hand off to the agent** — *Work on this* starts a **new Session** in the
   same project, with the issue as its first request, and switches the GUI to it,
-  so issue work never mixes into the conversation that asked for it.
+  so issue work never mixes into the conversation that asked for it. One issue
+  has exactly one session: a second click opens it again instead of starting
+  another.
 - **Agent tool included** — the same operations are exposed to the model as the
   `github_issues` tool, including `assign`.
 
